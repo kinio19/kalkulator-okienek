@@ -18,7 +18,7 @@
   ol{padding-left:1.2rem;line-height:1.6}
   .err{color:#b00020}
   .row{display:flex;gap:.5rem}
-  button{font-size:1.2rem;padding:0 .8rem;cursor:pointer}
+  button{padding:0 .8rem;cursor:pointer;border:1px solid #888;border-radius:6px}
   input:read-only{background:#e8e8e8}
   select{font-size:1rem;padding:0 .4rem}
   small{color:#555}
@@ -31,7 +31,7 @@
 <div class="row"><input id="tape" type="number" step="any" value="19237"><select id="u-tape"><option>mm</option><option>cm</option></select></div>
 <small id="h-tape"></small>
 <label>Szerokość okienka</label>
-<div class="row"><input id="win" type="number" step="any" value="400"><select id="u-win"><option>mm</option><option>cm</option></select><button id="lock" type="button" title="Zablokuj wymiar">🔓</button></div>
+<div class="row"><input id="win" type="number" step="any" value="400"><select id="u-win"><option>mm</option><option>cm</option></select><button id="lock" type="button" title="Zablokuj wymiar" aria-label="Zablokuj wymiar"></button></div>
 <small id="h-win"></small>
 <label>Szerokość linii – podaj wartość wyjściową, po obliczeniu pokaże wynik</label>
 <div class="row"><input id="line" type="number" step="any" value="60"><select id="u-line"><option>mm</option><option>cm</option></select></div>
@@ -108,12 +108,16 @@ function draw(w, line, n) {
   g += `<text x="0" y="${top - 12}" font-size="${fs - 2}" fill="#555">szary = linia, biały = okienko</text>`;
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="border:1px solid #ccc;background:#fafafa">${g}</svg>`;
 }
-$('lock').addEventListener('click', () => {
-  const locked = !$('win').readOnly;
+const LOCK_OPEN = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#2e7d32" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2" fill="#c8e6c9"/><path d="M8 11V7a4 4 0 0 1 7.5-1.9"/></svg>';
+const LOCK_CLOSED = '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2.2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2" fill="#ffcdd2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>';
+function setLock(locked) {
   $('win').readOnly = locked;
-  $('lock').textContent = locked ? '🔒' : '🔓';
-  $('lock').title = locked ? 'Odblokuj wymiar' : 'Zablokuj wymiar';
-});
+  $('lock').innerHTML = locked ? LOCK_CLOSED : LOCK_OPEN;
+  $('lock').title = $('lock').ariaLabel = locked ? 'Odblokuj wymiar' : 'Zablokuj wymiar';
+  $('lock').style.background = locked ? '#ffebee' : '#e8f5e9';
+}
+setLock(false);
+$('lock').addEventListener('click', () => setLock(!$('win').readOnly));
 ['tape', 'win'].forEach(id => $(id).addEventListener('input', calc));
 $('line').addEventListener('input', () => { baseLine = mm('line'); calc(); });
 IDS.forEach(id => {
