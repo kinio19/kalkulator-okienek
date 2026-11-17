@@ -20,23 +20,42 @@
   .row{display:flex;gap:.5rem}
   button{font-size:1.2rem;padding:0 .8rem;cursor:pointer}
   input:read-only{background:#e8e8e8}
+  select{font-size:1rem;padding:0 .4rem}
+  small{color:#555}
+  .row input{flex:1;min-width:0}
 </style>
 </head>
 <body>
 <h1>Kalkulator okienek</h1>
-<label>Długość taśmy (mm)<input id="tape" type="number" step="any" value="19237"></label>
-<label>Szerokość okienka (mm)</label>
-<div class="row"><input id="win" type="number" step="any" value="400"><button id="lock" type="button" title="Zablokuj wymiar">🔓</button></div>
-<label>Szerokość linii (mm) – podaj wartość wyjściową, po obliczeniu pokaże wynik<input id="line" type="number" step="any" value="60"></label>
+<label>Długość taśmy</label>
+<div class="row"><input id="tape" type="number" step="any" value="19237"><select id="u-tape"><option>mm</option><option>cm</option></select></div>
+<small id="h-tape"></small>
+<label>Szerokość okienka</label>
+<div class="row"><input id="win" type="number" step="any" value="400"><select id="u-win"><option>mm</option><option>cm</option></select><button id="lock" type="button" title="Zablokuj wymiar">🔓</button></div>
+<small id="h-win"></small>
+<label>Szerokość linii – podaj wartość wyjściową, po obliczeniu pokaże wynik</label>
+<div class="row"><input id="line" type="number" step="any" value="60"><select id="u-line"><option>mm</option><option>cm</option></select></div>
+<small id="h-line"></small>
 <div id="out" class="res"></div>
 <script>
 const $ = id => document.getElementById(id);
 const f = (x, d = 3) => String(+x.toFixed(d)).replace('.', ',');
+const fac = id => $('u-' + id).value === 'cm' ? 10 : 1;
+const mm = id => parseFloat($(id).value) * fac(id);
+const IDS = ['tape', 'win', 'line'];
 
-let baseLine = parseFloat($('line').value);
+function hints() {
+  IDS.forEach(id => {
+    const v = mm(id);
+    $('h-' + id).textContent = fac(id) === 10 && !isNaN(v) ? '= ' + f(v, 1) + ' mm' : '';
+  });
+}
+
+let baseLine = mm('line');
 
 function calc() {
-  const L = parseFloat($('tape').value), w = parseFloat($('win').value), l = baseLine;
+  const L = mm('tape'), w = mm('win'), l = baseLine;
+  hints();
   const out = $('out');
   if (!(L > 0 && w > 0 && l >= 0) || L < w + l) {
     out.innerHTML = '<span class="err">Podaj poprawne wartości (taśma musi być dłuższa niż okienko z linią).</span>';
@@ -50,7 +69,8 @@ function calc() {
   const add = Math.round(rest / n * 10) / 10; // zaokrąglenie do 0,1 mm jak w przykładzie
   const newStep = w + add + l;
   const check = newStep * n;
-  if (document.activeElement !== $('line')) $('line').value = +(l + add).toFixed(1);
+  if (document.activeElement !== $('line')) $('line').value = +((l + add) / fac('line')).toFixed(2);
+  hints();
   out.innerHTML = `
     <p>Szerokość okienka: <strong>${f(w)} mm</strong><br>
     Liczba pełnych okienek: <strong>${n}</strong></p>
@@ -95,7 +115,16 @@ $('lock').addEventListener('click', () => {
   $('lock').title = locked ? 'Odblokuj wymiar' : 'Zablokuj wymiar';
 });
 ['tape', 'win'].forEach(id => $(id).addEventListener('input', calc));
-$('line').addEventListener('input', () => { baseLine = parseFloat($('line').value); calc(); });
+$('line').addEventListener('input', () => { baseLine = mm('line'); calc(); });
+IDS.forEach(id => {
+  let prev = fac(id);
+  $('u-' + id).addEventListener('change', () => {
+    const v = parseFloat($(id).value);
+    if (!isNaN(v)) $(id).value = +(v * prev / fac(id)).toFixed(3);
+    prev = fac(id);
+    calc();
+  });
+});
 $('line').addEventListener('blur', calc);
 window.addEventListener('resize', calc);
 calc();
